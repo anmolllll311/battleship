@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aegis Battleship - P2P Tactical Naval Warfare</title>
+  <meta name="description" content="Zero-latency, serverless, cryptographically fair peer-to-peer Battleship game over WebRTC with QR and code exchange.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Self-contained local QR Code Generator & Scanner Libraries -->
+  <script src="qrcode.bundle.js"></script>
+  <script src="jsqr.bundle.js"></script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Ambient Particle & Canvas FX Overlay -->
+  <canvas id="fx-canvas"></canvas>
+
+  <div class="app-container">
+    <!-- Header Command Bar -->
+    <header class="command-bar glass-panel">
+      <div class="brand">
+        <div class="radar-logo">
+          <div class="radar-sweep-icon"></div>
+        </div>
+        <div>
+          <h1 class="game-title">AEGIS // BATTLESHIP</h1>
+          <div class="game-subtitle">PEER-TO-PEER TACTICAL NAVAL WARFARE</div>
+        </div>
+      </div>
+
+      <div class="status-panel">
+        <div id="conn-badge" class="badge badge-disconnected">
+          <span class="status-dot"></span>
+          <span id="conn-text">OFFLINE</span>
+        </div>
+        <div id="security-badge" class="badge badge-crypto" title="Cryptographically verified anti-cheat via SHA-256 commitments">
+          <span class="shield-icon">🛡️</span>
+          <span>SHA-256 FAIR-PLAY</span>
+        </div>
+        <button id="btn-sound" class="btn btn-icon" title="Toggle Sound FX">🔊</button>
+      </div>
+    </header>
+
+    <!-- Notification / Intel Banner -->
+    <div id="intel-banner" class="intel-banner glass-panel">
+      <span class="intel-icon">📡</span>
+      <span id="intel-text">Initialize peer connection or configure fleet defense coordinates to begin.</span>
+    </div>
+
+    <!-- Main Battlefield View -->
+    <main class="battle-theater">
+      <!-- Player Harbor / Defense Board -->
+      <section class="grid-section glass-panel">
+        <div class="section-header">
+          <div class="section-title">
+            <span class="status-tag tag-friendly">FRIENDLY FLEET</span>
+            <h2>HARBOR DEFENSE</h2>
+          </div>
+          <div class="fleet-status" id="friendly-fleet-status">
+            <span class="ship-badge active" data-ship="carrier" title="Aircraft Carrier (5)">CV 5</span>
+            <span class="ship-badge active" data-ship="battleship" title="Battleship (4)">BB 4</span>
+            <span class="ship-badge active" data-ship="cruiser" title="Cruiser (3)">CA 3</span>
+            <span class="ship-badge active" data-ship="submarine" title="Submarine (3)">SS 3</span>
+            <span class="ship-badge active" data-ship="destroyer" title="Destroyer (2)">DD 2</span>
+          </div>
+        </div>
+
+        <div class="board-wrapper">
+          <div class="grid-coord-top" id="coord-top-player"></div>
+          <div class="grid-body-row">
+            <div class="grid-coord-left" id="coord-left-player"></div>
+            <div class="board-grid" id="player-grid"></div>
+          </div>
+        </div>
+
+        <!-- Fleet Placement Dock (Visible during deployment) -->
+        <div id="dock-panel" class="dock-panel">
+          <div class="dock-instructions">
+            <span>Select a vessel to place or rotate. <b>R</b> / <b>Space</b> to rotate.</span>
+            <div class="dock-actions">
+              <button id="btn-rotate" class="btn btn-sm btn-outline">Rotate: <span id="rot-text">HORIZONTAL</span></button>
+              <button id="btn-randomize" class="btn btn-sm btn-outline">🎲 Randomize</button>
+              <button id="btn-clear-fleet" class="btn btn-sm btn-ghost">Clear</button>
+            </div>
+          </div>
+
+          <div class="ship-picker" id="ship-picker">
+            <div class="ship-item selected" data-ship="carrier" data-length="5">
+              <div class="ship-info"><span>Carrier</span><span class="ship-len">5</span></div>
+              <div class="ship-preview len-5"></div>
+            </div>
+            <div class="ship-item" data-ship="battleship" data-length="4">
+              <div class="ship-info"><span>Battleship</span><span class="ship-len">4</span></div>
+              <div class="ship-preview len-4"></div>
+            </div>
+            <div class="ship-item" data-ship="cruiser" data-length="3">
+              <div class="ship-info"><span>Cruiser</span><span class="ship-len">3</span></div>
+              <div class="ship-preview len-3"></div>
+            </div>
+            <div class="ship-item" data-ship="submarine" data-length="3">
+              <div class="ship-info"><span>Submarine</span><span class="ship-len">3</span></div>
+              <div class="ship-preview len-3"></div>
+            </div>
+            <div class="ship-item" data-ship="destroyer" data-length="2">
+              <div class="ship-info"><span>Destroyer</span><span class="ship-len">2</span></div>
+              <div class="ship-preview len-2"></div>
+            </div>
+          </div>
+
+          <button id="btn-lock-fleet" class="btn btn-primary btn-block" disabled>
+            LOCK IN FLEET COMMITMENT (0/5)
+          </button>
+        </div>
+      </section>
+
+      <!-- Opponent Radar / Targeting Grid -->
+      <section class="grid-section glass-panel">
+        <div class="section-header">
+          <div class="section-title">
+            <span class="status-tag tag-hostile">THEATER OF COMBAT</span>
+            <h2>RADAR TARGETING</h2>
+          </div>
+          <div class="fleet-status" id="hostile-fleet-status">
+            <span class="ship-badge active" data-ship="carrier" title="Enemy Carrier (5)">CV 5</span>
+            <span class="ship-badge active" data-ship="battleship" title="Enemy Battleship (4)">BB 4</span>
+            <span class="ship-badge active" data-ship="cruiser" title="Enemy Cruiser (3)">CA 3</span>
+            <span class="ship-badge active" data-ship="submarine" title="Enemy Submarine (3)">SS 3</span>
+            <span class="ship-badge active" data-ship="destroyer" title="Enemy Destroyer (2)">DD 2</span>
+          </div>
+        </div>
+
+        <div class="board-wrapper">
+          <div class="grid-coord-top" id="coord-top-enemy"></div>
+          <div class="grid-body-row">
+            <div class="grid-coord-left" id="coord-left-enemy"></div>
+            <div class="board-grid radar-screen" id="enemy-grid">
+              <div class="radar-sweep-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Combat Intel & Action Panel -->
+        <div class="combat-panel">
+          <div class="turn-indicator" id="turn-indicator">
+            <span class="turn-dot"></span>
+            <span id="turn-text">Awaiting P2P Connection...</span>
+          </div>
+          <div class="combat-feed" id="combat-feed">
+            <div class="feed-entry system">[SYSTEM] Aegis Tactical Net Initialized.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Controls & Peer Connect Trigger -->
+    <footer class="bottom-bar glass-panel">
+      <div class="p2p-quick-status">
+        <span class="key-label">COMMUNICATION LINK:</span>
+        <span id="peer-status-label" class="val-mono">DISCONNECTED</span>
+      </div>
+      <div class="bottom-actions">
+        <button id="btn-open-connect" class="btn btn-gold">
+          ⚡ ESTABLISH P2P LINK (QR / CODE)
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- P2P Connection Modal (QR + Code) -->
+  <div id="connect-modal" class="modal-backdrop hidden">
+    <div class="modal-dialog glass-panel">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="icon-brass">🛰️</span>
+          <h2>P2P WEBRTC SECURE COMM LINK</h2>
+        </div>
+        <button id="btn-close-modal" class="btn-close" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="modal-tabs">
+        <button id="tab-host" class="tab-btn active">HOST GAME (CREATE OFFER)</button>
+        <button id="tab-join" class="tab-btn">JOIN GAME (RECEIVE OFFER)</button>
+      </div>
+
+      <div class="modal-content">
+        <!-- Host View -->
+        <div id="host-view" class="tab-pane active">
+          <div class="step-card">
+            <span class="step-num">STEP 1</span>
+            <p>Generate host invitation code or QR code to share with your opponent.</p>
+            <button id="btn-create-offer" class="btn btn-primary">Generate Host Invite</button>
+          </div>
+
+          <div id="host-offer-box" class="exchange-box hidden">
+            <label class="input-label">HOST INVITE CODE (Share with opponent):</label>
+            <div class="code-action-row">
+              <input type="text" id="host-offer-code" class="code-input" readonly>
+              <button id="btn-copy-host-offer" class="btn btn-gold btn-sm">Copy</button>
+            </div>
+            <div class="qr-display-wrap">
+              <canvas id="qr-offer-canvas"></canvas>
+              <span class="qr-caption">Scan with opponent's phone camera</span>
+            </div>
+          </div>
+
+          <div id="host-answer-box" class="step-card hidden">
+            <span class="step-num">STEP 2</span>
+            <p>Paste the Answer Code returned by your opponent (or scan their answer QR):</p>
+            <div class="code-action-row">
+              <input type="text" id="host-answer-input" class="code-input" placeholder="Paste opponent answer code here...">
+              <button id="btn-accept-answer" class="btn btn-primary btn-sm">Connect</button>
+            </div>
+            <div class="scan-button-wrap">
+              <button id="btn-scan-answer-qr" class="btn btn-outline btn-sm">📷 Scan Opponent's Answer QR</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Join View -->
+        <div id="join-view" class="tab-pane hidden">
+          <div class="step-card">
+            <span class="step-num">STEP 1</span>
+            <p>Paste Host Code from opponent or scan their Invite QR code:</p>
+            <div class="code-action-row">
+              <input type="text" id="join-offer-input" class="code-input" placeholder="Paste host invite code here...">
+              <button id="btn-generate-answer" class="btn btn-primary btn-sm">Accept & Respond</button>
+            </div>
+            <div class="scan-button-wrap">
+              <button id="btn-scan-offer-qr" class="btn btn-outline btn-sm">📷 Scan Host Invite QR</button>
+            </div>
+          </div>
+
+          <div id="join-answer-box" class="exchange-box hidden">
+            <label class="input-label">YOUR ANSWER CODE (Give this back to Host):</label>
+            <div class="code-action-row">
+              <input type="text" id="join-answer-code" class="code-input" readonly>
+              <button id="btn-copy-join-answer" class="btn btn-gold btn-sm">Copy</button>
+            </div>
+            <div class="qr-display-wrap">
+              <canvas id="qr-answer-canvas"></canvas>
+              <span class="qr-caption">Host can scan this answer QR code</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Camera Scanner Modal -->
+  <div id="camera-modal" class="modal-backdrop hidden">
+    <div class="camera-dialog glass-panel">
+      <div class="modal-header">
+        <h3>SCAN WEBRTC QR CODE</h3>
+        <button id="btn-close-camera" class="btn-close">&times;</button>
+      </div>
+      <div class="camera-viewport">
+        <video id="camera-video" playsinline></video>
+        <canvas id="camera-canvas" class="hidden"></canvas>
+        <div class="scanner-crosshair"></div>
+      </div>
+      <p class="camera-status" id="camera-status">Position QR code inside the box...</p>
+    </div>
+  </div>
+
+  <!-- Game Over & Fair-Play Proof Modal -->
+  <div id="gameover-modal" class="modal-backdrop hidden">
+    <div class="modal-dialog glass-panel text-center">
+      <div class="modal-header center">
+        <h2 id="gameover-title" class="gameover-headline">VICTORY ACHIEVED</h2>
+      </div>
+      <div class="modal-content">
+        <p id="gameover-desc" class="lead-text">All enemy naval assets have been neutralized.</p>
+
+        <!-- Cryptographic Fair Play Verification Badge -->
+        <div class="crypto-audit-box">
+          <div class="audit-header">
+            <span>🛡️ CRYPTOGRAPHIC AUDIT REPORT</span>
+            <span id="audit-status" class="badge badge-success">VERIFIED 100% UNTAMPERED</span>
+          </div>
+          <div class="audit-detail">
+            <div><span class="audit-label">Your Initial Board SHA-256:</span><br><code id="audit-local-hash">-</code></div>
+            <div><span class="audit-label">Opponent Initial Board SHA-256:</span><br><code id="audit-peer-hash">-</code></div>
+          </div>
+          <p class="audit-explanation">Both boards were cryptographically sealed before Turn 1 and checked on each strike. Neither player could alter ships mid-game.</p>
+        </div>
+
+        <button id="btn-rematch" class="btn btn-gold btn-lg">PLAY AGAIN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="audio.js"></script>
+  <script src="crypto.js"></script>
+  <script src="webrtc.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
