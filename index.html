@@ -54,14 +54,169 @@
       <span id="intel-text">Initialize peer connection or configure fleet defense coordinates to begin.</span>
     </div>
 
-    <!-- Main Battlefield View -->
-    <main class="battle-theater">
+    <!-- Apple-style Landing Screen (Mobile-First Entry Experience) -->
+    <section id="onboarding-screen" class="apple-hero-container">
+      <!-- Glow & Ambient Aura -->
+      <div class="apple-glow-orb"></div>
+
+      <div class="apple-card">
+        <!-- Floating Brand Pill -->
+        <div class="apple-pill-brand">
+          <span class="apple-radar-dot"></span>
+          <span>AEGIS NAVAL COMBAT</span>
+        </div>
+
+        <h1 class="apple-hero-title">Prepare for Battle.</h1>
+        <p class="apple-hero-desc">Zero-latency, cryptographically verified peer-to-peer naval warfare.</p>
+
+        <!-- Phase 1: Gaming Name Input Field -->
+        <div id="step-name-entry" class="apple-name-section">
+          <div class="apple-input-wrapper">
+            <input 
+              type="text" 
+              id="gaming-name-input" 
+              class="apple-input" 
+              placeholder="Enter Commander Name" 
+              autocomplete="off" 
+              maxlength="16"
+              spellcheck="false"
+            />
+            <button id="btn-name-confirm" class="apple-arrow-btn" aria-label="Confirm Name" title="Proceed">
+              <svg viewBox="0 0 24 24" class="arrow-svg" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+          </div>
+          <span class="apple-input-hint">Type your name to begin</span>
+        </div>
+
+        <!-- Phase 2: Host Game Share (Custom QR + 6-Digit Code) -->
+        <div id="step-host-ready" class="apple-share-section hidden">
+          <div class="apple-commander-badge">
+            <span class="badge-avatar">⚓</span>
+            <div class="badge-text">
+              <span class="badge-sub">COMMANDER</span>
+              <strong id="display-gamer-name" class="badge-name">ADMIRAL</strong>
+            </div>
+          </div>
+
+          <!-- 6-digit Room Code (No 0, O, 1, I, L) -->
+          <div class="apple-code-card">
+            <span class="apple-code-label">GAME CODE</span>
+            <div class="apple-code-value-wrap">
+              <span id="apple-display-code" class="apple-code-value">------</span>
+              <button id="btn-copy-code" class="apple-code-copy-btn" title="Copy Game Code">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span id="copy-text-feedback">Copy</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- QR Code Canvas with Apple rounded presentation -->
+          <div class="apple-qr-showcase">
+            <div class="apple-qr-frame">
+              <canvas id="apple-qr-canvas"></canvas>
+            </div>
+            <p class="apple-qr-hint">Scan with opponent's phone to connect</p>
+          </div>
+
+          <!-- WebRTC Signaling Exchange Accordion / Direct Link Status -->
+          <div class="apple-p2p-status-box">
+            <div class="apple-status-row">
+              <span class="apple-pulse-indicator"></span>
+              <span id="apple-p2p-status-text">Awaiting opponent to scan QR or connect...</span>
+            </div>
+            <button id="btn-toggle-advanced-signal" class="apple-btn-text">Advanced Manual Link (Signal Code)</button>
+            <div id="apple-advanced-signal-wrap" class="hidden">
+              <div class="advanced-field-group">
+                <label>Host WebRTC Offer Payload:</label>
+                <div class="code-action-row">
+                  <input type="text" id="apple-full-offer" class="code-input" readonly>
+                  <button id="btn-copy-full-offer" class="btn btn-outline btn-sm">Copy</button>
+                </div>
+              </div>
+              <div class="advanced-field-group">
+                <label>Paste Opponent's Answer:</label>
+                <div class="code-action-row">
+                  <input type="text" id="apple-manual-answer" class="code-input" placeholder="Paste response here...">
+                  <button id="btn-confirm-manual-answer" class="btn btn-primary btn-sm">Connect</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 3: Join a Game Modal/Inline View -->
+        <div id="step-join-view" class="apple-join-section hidden">
+          <div class="apple-join-header">
+            <h3>Join Existing Fleet</h3>
+            <p>Enter the 6-digit room code or scan opponent's QR code.</p>
+          </div>
+
+          <div class="apple-join-input-group">
+            <input 
+              type="text" 
+              id="join-code-input" 
+              class="apple-input apple-input-center apple-code-entry" 
+              placeholder="CODE" 
+              maxlength="6"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <div class="apple-join-btn-row">
+              <button id="btn-join-with-code" class="apple-action-btn apple-action-primary" disabled>
+                Connect to Game
+              </button>
+              <button id="btn-join-scan-qr" class="apple-action-btn apple-action-glass">
+                📷 Scan Host QR
+              </button>
+            </div>
+          </div>
+
+          <!-- Manual join WebRTC Payload toggle -->
+          <button id="btn-toggle-join-advanced" class="apple-btn-text">Manual WebRTC Offer Exchange</button>
+          <div id="apple-join-advanced-wrap" class="hidden">
+            <div class="advanced-field-group">
+              <label>Paste Host WebRTC Offer:</label>
+              <div class="code-action-row">
+                <input type="text" id="join-manual-offer-input" class="code-input" placeholder="Paste host code...">
+                <button id="btn-generate-join-response" class="btn btn-primary btn-sm">Generate Answer</button>
+              </div>
+            </div>
+            <div id="join-manual-response-box" class="advanced-field-group hidden">
+              <label>Your Answer (Provide to host):</label>
+              <div class="code-action-row">
+                <input type="text" id="join-manual-answer-code" class="code-input" readonly>
+                <button id="btn-copy-join-manual-answer" class="btn btn-gold btn-sm">Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Global Mode Switcher Footer -->
+        <div class="apple-switch-footer">
+          <button id="btn-switch-join-game" class="apple-switch-btn">
+            Already have a host? <span class="highlight">Join a Game</span>
+          </button>
+          <button id="btn-switch-host-game" class="apple-switch-btn hidden">
+            Want to create instead? <span class="highlight">Host Game</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Battlefield View (Revealed when Connected or in Single Setup) -->
+    <main id="battle-theater" class="battle-theater hidden">
       <!-- Player Harbor / Defense Board -->
       <section class="grid-section glass-panel">
         <div class="section-header">
           <div class="section-title">
             <span class="status-tag tag-friendly">FRIENDLY FLEET</span>
-            <h2>HARBOR DEFENSE</h2>
+            <h2 id="player-theater-name">HARBOR DEFENSE</h2>
           </div>
           <div class="fleet-status" id="friendly-fleet-status">
             <span class="ship-badge active" data-ship="carrier" title="Aircraft Carrier (5)">CV 5</span>
@@ -125,7 +280,7 @@
         <div class="section-header">
           <div class="section-title">
             <span class="status-tag tag-hostile">THEATER OF COMBAT</span>
-            <h2>RADAR TARGETING</h2>
+            <h2 id="peer-theater-name">RADAR TARGETING</h2>
           </div>
           <div class="fleet-status" id="hostile-fleet-status">
             <span class="ship-badge active" data-ship="carrier" title="Enemy Carrier (5)">CV 5</span>
@@ -160,14 +315,14 @@
     </main>
 
     <!-- Bottom Controls & Peer Connect Trigger -->
-    <footer class="bottom-bar glass-panel">
+    <footer id="main-footer" class="bottom-bar glass-panel hidden">
       <div class="p2p-quick-status">
         <span class="key-label">COMMUNICATION LINK:</span>
         <span id="peer-status-label" class="val-mono">DISCONNECTED</span>
       </div>
       <div class="bottom-actions">
         <button id="btn-open-connect" class="btn btn-gold">
-          ⚡ ESTABLISH P2P LINK (QR / CODE)
+          ⚡ LINK DETAILS (QR / CODE)
         </button>
       </div>
     </footer>

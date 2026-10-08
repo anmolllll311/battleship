@@ -50,8 +50,51 @@ class BattleshipGame {
     this.particles = [];
     this.initCanvasFx();
 
+    // Player & Gamer Profile
+    this.gamerName = "COMMANDER";
+    this.gameCode = "";
+    this.peerGamerName = "OPPONENT";
+
     // DOM References
     this.dom = {
+      // Apple Onboarding DOM
+      onboardingScreen: document.getElementById('onboarding-screen'),
+      stepNameEntry: document.getElementById('step-name-entry'),
+      stepHostReady: document.getElementById('step-host-ready'),
+      stepJoinView: document.getElementById('step-join-view'),
+      gamingNameInput: document.getElementById('gaming-name-input'),
+      btnNameConfirm: document.getElementById('btn-name-confirm'),
+      displayGamerName: document.getElementById('display-gamer-name'),
+      appleDisplayCode: document.getElementById('apple-display-code'),
+      btnCopyCode: document.getElementById('btn-copy-code'),
+      copyTextFeedback: document.getElementById('copy-text-feedback'),
+      appleQrCanvas: document.getElementById('apple-qr-canvas'),
+      appleP2pStatusText: document.getElementById('apple-p2p-status-text'),
+      btnToggleAdvancedSignal: document.getElementById('btn-toggle-advanced-signal'),
+      appleAdvancedSignalWrap: document.getElementById('apple-advanced-signal-wrap'),
+      appleFullOffer: document.getElementById('apple-full-offer'),
+      btnCopyFullOffer: document.getElementById('btn-copy-full-offer'),
+      appleManualAnswer: document.getElementById('apple-manual-answer'),
+      btnConfirmManualAnswer: document.getElementById('btn-confirm-manual-answer'),
+      // Apple Join DOM
+      joinCodeInput: document.getElementById('join-code-input'),
+      btnJoinWithCode: document.getElementById('btn-join-with-code'),
+      btnJoinScanQr: document.getElementById('btn-join-scan-qr'),
+      btnToggleJoinAdvanced: document.getElementById('btn-toggle-join-advanced'),
+      appleJoinAdvancedWrap: document.getElementById('apple-join-advanced-wrap'),
+      joinManualOfferInput: document.getElementById('join-manual-offer-input'),
+      btnGenerateJoinResponse: document.getElementById('btn-generate-join-response'),
+      joinManualResponseBox: document.getElementById('join-manual-response-box'),
+      joinManualAnswerCode: document.getElementById('join-manual-answer-code'),
+      btnCopyJoinManualAnswer: document.getElementById('btn-copy-join-manual-answer'),
+      btnSwitchJoinGame: document.getElementById('btn-switch-join-game'),
+      btnSwitchHostGame: document.getElementById('btn-switch-host-game'),
+      // Battle Theater and Bar
+      battleTheater: document.getElementById('battle-theater'),
+      mainFooter: document.getElementById('main-footer'),
+      playerTheaterName: document.getElementById('player-theater-name'),
+      peerTheaterName: document.getElementById('peer-theater-name'),
+      // Grids & Boards
       playerGrid: document.getElementById('player-grid'),
       enemyGrid: document.getElementById('enemy-grid'),
       dockPanel: document.getElementById('dock-panel'),
@@ -108,7 +151,18 @@ class BattleshipGame {
 
     this.initGrids();
     this.bindEvents();
+    this.bindAppleOnboarding();
     this.randomizeFleet(); // default randomized placement for instant play
+  }
+
+  // Generate 6-character clean room code without 0, O, 1, I, L
+  static generateCleanCode() {
+    const chars = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
   }
 
   // Generate 10x10 grids and coordinate axes (A-J, 1-10)
@@ -258,6 +312,236 @@ class BattleshipGame {
       this.dom.gameOverModal.classList.add('hidden');
       this.resetGame();
     });
+  }
+
+  // --- Apple Landing Experience Handlers ---
+  bindAppleOnboarding() {
+    // 1. Dynamic typing in Commander Name field reveals smooth arrow button
+    this.dom.gamingNameInput.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      if (val.length > 0) {
+        this.dom.btnNameConfirm.classList.add('visible');
+      } else {
+        this.dom.btnNameConfirm.classList.remove('visible');
+      }
+    });
+
+    // Enter key submits name
+    this.dom.gamingNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && this.dom.gamingNameInput.value.trim().length > 0) {
+        this.handleNameConfirm();
+      }
+    });
+
+    // Arrow button confirmation
+    this.dom.btnNameConfirm.addEventListener('click', () => {
+      this.handleNameConfirm();
+    });
+
+    // Mode Switching between Host & Join
+    this.dom.btnSwitchJoinGame.addEventListener('click', () => {
+      this.dom.stepHostReady.classList.add('hidden');
+      this.dom.stepNameEntry.classList.add('hidden');
+      this.dom.stepJoinView.classList.remove('hidden');
+      this.dom.btnSwitchJoinGame.classList.add('hidden');
+      this.dom.btnSwitchHostGame.classList.remove('hidden');
+    });
+
+    this.dom.btnSwitchHostGame.addEventListener('click', () => {
+      this.dom.stepJoinView.classList.add('hidden');
+      if (this.gameCode) {
+        this.dom.stepHostReady.classList.remove('hidden');
+      } else {
+        this.dom.stepNameEntry.classList.remove('hidden');
+      }
+      this.dom.btnSwitchHostGame.classList.add('hidden');
+      this.dom.btnSwitchJoinGame.classList.remove('hidden');
+    });
+
+    // Copy 6-digit code button
+    this.dom.btnCopyCode.addEventListener('click', () => {
+      if (!this.gameCode) return;
+      navigator.clipboard.writeText(this.gameCode);
+      this.dom.copyTextFeedback.textContent = 'Copied!';
+      setTimeout(() => {
+        this.dom.copyTextFeedback.textContent = 'Copy';
+      }, 1500);
+    });
+
+    // Advanced manual signaling toggles
+    this.dom.btnToggleAdvancedSignal.addEventListener('click', () => {
+      this.dom.appleAdvancedSignalWrap.classList.toggle('hidden');
+    });
+
+    this.dom.btnCopyFullOffer.addEventListener('click', () => {
+      navigator.clipboard.writeText(this.dom.appleFullOffer.value);
+      this.dom.btnCopyFullOffer.textContent = 'Copied!';
+      setTimeout(() => this.dom.btnCopyFullOffer.textContent = 'Copy', 1500);
+    });
+
+    this.dom.btnConfirmManualAnswer.addEventListener('click', () => {
+      const ans = this.dom.appleManualAnswer.value.trim();
+      if (!ans) return alert('Paste response code.');
+      this.rtc.acceptAnswer(ans).then(() => {
+        this.transitionToBattlefield();
+      }).catch(err => alert(err.message));
+    });
+
+    // Join Code Input Formatting & Button enabling
+    this.dom.joinCodeInput.addEventListener('input', (e) => {
+      // Remove spaces & lowercase, eliminate 0, O, 1, I, L
+      let val = e.target.value.toUpperCase().replace(/[01OIL\s]/g, '');
+      e.target.value = val;
+      this.dom.btnJoinWithCode.disabled = val.length < 6;
+    });
+
+    this.dom.btnJoinWithCode.addEventListener('click', () => {
+      const code = this.dom.joinCodeInput.value.trim();
+      if (code.length === 6) {
+        // Look up room data or prompt peer
+        this.handleJoinWithCode(code);
+      }
+    });
+
+    // Scan QR from Join Screen
+    this.dom.btnJoinScanQr.addEventListener('click', () => {
+      this.openCameraScanner((qrData) => {
+        this.handleIncomingQrData(qrData);
+      });
+    });
+
+    // Join Advanced WebRTC exchange
+    this.dom.btnToggleJoinAdvanced.addEventListener('click', () => {
+      this.dom.appleJoinAdvancedWrap.classList.toggle('hidden');
+    });
+
+    this.dom.btnGenerateJoinResponse.addEventListener('click', async () => {
+      const offerCode = this.dom.joinManualOfferInput.value.trim();
+      if (!offerCode) return alert('Paste host WebRTC offer.');
+      try {
+        this.initWebRTC();
+        const ans = await this.rtc.initJoiner(offerCode);
+        this.dom.joinManualAnswerCode.value = ans;
+        this.dom.joinManualResponseBox.classList.remove('hidden');
+      } catch (err) {
+        alert('Failed: ' + err.message);
+      }
+    });
+
+    this.dom.btnCopyJoinManualAnswer.addEventListener('click', () => {
+      navigator.clipboard.writeText(this.dom.joinManualAnswerCode.value);
+      this.dom.btnCopyJoinManualAnswer.textContent = 'Copied!';
+      setTimeout(() => this.dom.btnCopyJoinManualAnswer.textContent = 'Copy', 1500);
+    });
+  }
+
+  async handleNameConfirm() {
+    const name = this.dom.gamingNameInput.value.trim() || 'COMMANDER';
+    this.gamerName = name.toUpperCase();
+    this.dom.displayGamerName.textContent = this.gamerName;
+    if (this.dom.playerTheaterName) {
+      this.dom.playerTheaterName.textContent = `${this.gamerName}'S HARBOR`;
+    }
+
+    // Generate 6-digit clean alphanumeric room code
+    this.gameCode = BattleshipGame.generateCleanCode();
+    this.dom.appleDisplayCode.textContent = this.gameCode;
+
+    // Transition smoothly from Name input to Share Screen
+    this.dom.stepNameEntry.classList.add('hidden');
+    this.dom.stepHostReady.classList.remove('hidden');
+
+    // Initiate WebRTC Host offer gathering
+    this.dom.appleP2pStatusText.textContent = 'Generating encrypted host invite...';
+    try {
+      this.initWebRTC();
+      const offerCode = await this.rtc.initHost();
+      this.dom.appleFullOffer.value = offerCode;
+      this.dom.hostOfferCode.value = offerCode;
+
+      // Construct customized QR code payload with commander name + clean room code
+      const qrPayload = JSON.stringify({
+        g: this.gamerName,
+        c: this.gameCode,
+        o: offerCode
+      });
+
+      // Render customized QR code on Apple canvas
+      if (window.QRCode && this.dom.appleQrCanvas) {
+        QRCode.toCanvas(this.dom.appleQrCanvas, qrPayload, {
+          width: 220,
+          margin: 1,
+          color: {
+            dark: '#050b14',
+            light: '#ffffff'
+          }
+        });
+      }
+
+      // Save locally to allow cross-tab joining on same device/LAN
+      try {
+        localStorage.setItem(`aegis_room_${this.gameCode}`, qrPayload);
+      } catch (e) {}
+
+      this.dom.appleP2pStatusText.textContent = 'Ready! Opponent can scan QR or join code.';
+      window.soundEngine.playSonar();
+    } catch (err) {
+      this.dom.appleP2pStatusText.textContent = 'Network warning: ' + err.message;
+    }
+  }
+
+  async handleIncomingQrData(qrData) {
+    try {
+      let parsed = null;
+      try {
+        parsed = JSON.parse(qrData);
+      } catch (e) {
+        // Raw offer string fallback
+        parsed = { o: qrData };
+      }
+
+      if (parsed.g) {
+        this.peerGamerName = parsed.g;
+        if (this.dom.peerTheaterName) {
+          this.dom.peerTheaterName.textContent = `${this.peerGamerName}'S RADAR`;
+        }
+      }
+
+      const offerCode = parsed.o || qrData;
+      this.initWebRTC();
+      const answerCode = await this.rtc.initJoiner(offerCode);
+
+      // Store answer or exchange
+      this.dom.joinManualAnswerCode.value = answerCode;
+      this.dom.appleJoinAdvancedWrap.classList.remove('hidden');
+      this.dom.joinManualResponseBox.classList.remove('hidden');
+      alert(`Answer generated! If playing on different devices, host can scan your answer or paste it.`);
+    } catch (err) {
+      alert('Error parsing QR invite: ' + err.message);
+    }
+  }
+
+  async handleJoinWithCode(code) {
+    // Check if hosted locally or on same origin/browser
+    const saved = localStorage.getItem(`aegis_room_${code}`);
+    if (saved) {
+      this.handleIncomingQrData(saved);
+      return;
+    }
+    // Otherwise notify player to scan QR or use direct signal
+    alert(`Code ${code} entered! To establish serverless direct connection without central server, scan the host's QR code using the "Scan Host QR" button below.`);
+  }
+
+  transitionToBattlefield() {
+    if (this.dom.onboardingScreen) {
+      this.dom.onboardingScreen.classList.add('hidden');
+    }
+    if (this.dom.battleTheater) {
+      this.dom.battleTheater.classList.remove('hidden');
+    }
+    if (this.dom.mainFooter) {
+      this.dom.mainFooter.classList.remove('hidden');
+    }
   }
 
   toggleRotation() {
@@ -551,6 +835,7 @@ class BattleshipGame {
       this.dom.connText.textContent = 'P2P ENCRYPTED LINK ONLINE';
       this.dom.peerStatusLabel.textContent = 'ONLINE (DIRECT)';
       this.dom.connectModal.classList.add('hidden');
+      this.transitionToBattlefield();
       window.soundEngine.playConnect();
 
       this.addCombatLog('info', 'Zero-latency WebRTC data channel established directly with opponent!');
